@@ -1,0 +1,73 @@
+#Pig 
+----
+The execution of Pig commands are usually in this order:-
+
+LOAD
+FILTER
+GROUP
+AGGREGATE, AVG, MAX, MIN 
+ORDER
+LIMIT
+STORE
+
+(NOTE: For applying aggregate and order, you got to decide for which Pig relation you need to run loop and for which column you need to apply aggregate or order)
+
+# to start pig in local mode. Input will be from local file system
+pig -x local
+
+# to start pig in local mode. Input will be from HDFS 
+pig or pig -x mapreduce
+
+# to enable pig use HCatalog APIs
+pig -useHCatalog
+
+# Load Dataset into Pig Relation stocks from the HDFS Location
+stocks = LOAD 'input_file/stocks' USING PigStorage(',') as (symbol:chararray, date:datetime, open:float, high:float, low:float, close:float, volume:int);
+
+# To see the structure of the Pig Relation
+DESC stocks;
+
+# looping through each record in the dataset
+rec1 = FOREACH stocks GENERATE symbol, close, open
+
+# doing some calculation and looping to get calculated results. we are looking for the 1st substring in the 1st column in the dataset.
+rec2 = FOREACH stocks GENERATE SUBSTRING($0, 0, 1) as sub, close - open as diff;
+
+# Print result
+DUMP rec1;
+DUMP rec2;
+
+# Store result in HDFS
+STORE rec2 INTO '/user/pig';
+
+# If you want to load dataset from HDFS location into Pig Relation with no column names and datatypes specified
+stocks = LOAD '/input_file/stocks' USING PigStorage(',');
+
+# If you want to load dataset from HDFS location into Pig Relation with column names but no datatypes
+stocks = LOAD '/input_file/stocks' USING PigStorage(',') as (symbol, date, open, high, low, close, volume);
+
+# If you want to load dataset from HDFS location into Pig Relation with column names and datatypes
+stocks = LOAD '/input_file/stocks' USING PigStorage(',') as (symbol:chararray, date:datetime, open:float, high:float, low:float, close:float, volume:int);
+
+# Filter records. GetYear function to get the year from the date
+filtered_records = FILTER stocks by GetYear(date) == 2016;
+
+# Grouping records
+grouped_records = GROUP filtered_records BY symbol;
+
+# see the structure of Pig relation. when you see the structure of grouped_records, you will see group is one of the column in the grouped bag.
+DESC grouped_records
+
+# To find the average volume of grouped records. 
+avg_vol = FOREACH grouped_records GENERATE group, ROUND(AVG(filtered_records.volume)) as avgvolume;
+
+# Order the result in descending order
+avg_vol_ordered = ORDER avg_vol BY avgvolume DESC;
+
+# Store top 5 records into HDFS 
+top5 = LIMIT avg_vol_ordered 5;
+STORE top10 INTO 'pig/output/avg-volume' USING PigStorage(',');
+
+# You can execute HDFS script from Pig prompt i.e from grunt shell
+!hdfs dfs -cat pig/output/avg-volume
+

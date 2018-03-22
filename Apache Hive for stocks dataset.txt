@@ -1,0 +1,50 @@
+# Hive
+------
+create database stocks_db;
+use stocks_db;
+
+# Simple select commands
+SELECT * FROM stocks WHERE symbol = 'AAA';
+SELECT * FROM stocks WHERE symbol IN ('AAA', 'B3B');
+SELECT * FROM stocks WHERE symbol LIKE 'A%';
+
+# Select with case
+SELECT symbol, price_open, price_close, volume,
+CASE
+	WHEN volume < 10000 THEN 'low'
+	WHEN volume >= 10000 AND volume < 50000 THEN 'middle'
+	WHEN volume >= 50000 AND volume < 60000 THEN 'high'
+	ELSE 'very high'
+END
+FROM stocks WHERE symbol = 'GEL';
+
+# Distinct and Limit
+SELECT DISTINCT symbol FROM stocks;
+SELECT * FROM stocks LIMIT 10;
+
+# Group BY
+SELECT year, symbol, avg(volume) FROM stocks GROUP BY year, symbol;
+
+# Group BY & Having
+SELECT year, symbol, avg(volume) FROM stocks GROUP BY year, symbol HAVING avg(volume) > 400000;
+
+#Managed vs External Table
+
+#Managed Table: It has full control over its dataset. When we drop table, its datasets, files are deleted from HDFS. We use this when table is being used by Hive application only.
+#External Table: It has no control over its dataset. When we drop table, its datasets, files are not deleted from HDFS. We use this when table is being used by many applications like pig, MapReduce.
+
+# Create Managed Table
+CREATE TABLE IF NOT EXISTS stocks (symbol string, ymd string, price_open float, price_high float, price_low float, price_close float, volume int) ROW FORMAT DELIMITED FIELDS TERMINATED BY ',';
+
+# Describe table type
+DESCRIBE FORMATTED stocks_db.stocks;
+
+# Execute HDFS commands from hive terminal
+!hadoop fs -ls /user/hive/warehouse/stocks_db.db/stocks;
+
+SELECT * from stocks;
+DROP table stocks;
+SELECT * from stocks;
+
+# Create External Table
+CREATE EXTERNAL TABLE IF NOT EXISTS stocks (symbol string, ymd string, price_open float, price_high float, price_low float, price_close float, volume int) ROW FORMAT DELIMITED FIELDS TERMINATED BY ',';
